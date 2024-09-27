@@ -50,23 +50,25 @@ def get_proxies() -> list[Proxy]:
 
 
 async def get_tg_clients() -> list[Client]:
-    session_names = get_session_names()
+    # session_names = get_session_names()
 
-    if not session_names:
-        raise FileNotFoundError("Not found session files")
+    # if not session_names:
+    #     raise FileNotFoundError("Not found session files")
 
-    if not settings.API_ID or not settings.API_HASH:
-        raise ValueError("API_ID and API_HASH not found in the .env file.")
+    # if not settings.API_ID or not settings.API_HASH:
+    #     raise ValueError("API_ID and API_HASH not found in the .env file.")
 
-    tg_clients = [Client(
-        name=session_name,
-        api_id=settings.API_ID,
-        api_hash=settings.API_HASH,
-        workdir='sessions/',
-        plugins=dict(root='bot/plugins')
-    ) for session_name in session_names]
+    # tg_clients = [Client(
+    #     name=session_name,
+    #     api_id=settings.API_ID,
+    #     api_hash=settings.API_HASH,
+    #     workdir='sessions/',
+    #     plugins=dict(root='bot/plugins')
+    # ) for session_name in session_names]
 
-    return tg_clients
+    datas = open("bot/config/data.txt").read().splitlines()
+    print(datas)
+    return datas
 
 
 async def process() -> None:
@@ -75,7 +77,8 @@ async def process() -> None:
 
     logger.info(f"Detected {len(get_session_names())} sessions | {len(get_proxies())} proxies")
 
-    action = parser.parse_args().action
+    # action = parser.parse_args().action
+    action = 2
 
     if not action:
         print(start_text)
@@ -98,8 +101,9 @@ async def process() -> None:
         await run_tasks(tg_clients=tg_clients)
 
 
-async def run_tasks(tg_clients: list[Client]):
+async def run_tasks(tg_clients):
     proxies = get_proxies()
+    print(proxies)
     proxies_cycle = cycle(proxies) if proxies else None
     tasks = [
         asyncio.create_task(

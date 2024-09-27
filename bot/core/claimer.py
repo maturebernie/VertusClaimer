@@ -4,6 +4,7 @@ import aiohttp
 import random
 from aiohttp_proxy import ProxyConnector
 
+import aiocfscrape
 from pyrogram import Client
 from better_proxy import Proxy
 from pyrogram.errors import Unauthorized, UserDeactivated, AuthKeyUnregistered
@@ -15,11 +16,12 @@ from bot.utils import logger
 from bot.config import settings
 from bot.exceptions import InvalidSession
 from .headers import headers
+from .TLS import TLSv1_3_BYPASS
 
 
 class Claimer:
-    def __init__(self, tg_client: Client, proxy: str):
-        self.session_name = tg_client.name
+    def __init__(self, tg_client, proxy: str):
+        self.session_name = tg_client
         self.tg_client = tg_client
         self.token = None
         self.proxy = proxy
@@ -27,55 +29,84 @@ class Claimer:
         self.ref_id = None
 
     async def check_proxy(self, http_client: aiohttp.ClientSession) -> None:
-        response = await http_client.get("https://httpbin.org/ip", timeout=aiohttp.ClientTimeout(5))
+        response = await http_client.get("https://httpbin.org/ip", timeout=aiohttp.ClientTimeout(30))
         response.raise_for_status()
         data = await response.json()
 
         ip = data.get('origin')
         logger.info(f"{self.session_name} | Proxy IP: {ip}")
 
+    async def check_proxy_2(self, http_client: aiohttp.ClientSession) -> None:
+        try:
+            response = await http_client.get(url='https://api.ipify.org?format=json', timeout=aiohttp.ClientTimeout(5))
+            ip = (await response.json()).get('ip')
+            logger.info(f"{self.session_name} | Proxy IP: {ip}")
+        except Exception as error:
+            logger.error(f"{self.session_name} | Proxy | Error: {error}")
+
+
+
     async def get_tg_web_data(self) -> str:
+        print(self.proxy)
         if self.proxy:
-            proxy = Proxy.from_str(self.proxy)
-            proxy_dict = dict(
-                scheme=proxy.protocol,
-                hostname=proxy.host,
-                port=proxy.port,
-                username=proxy.login,
-                password=proxy.password
-            )
+            # proxy = Proxy.from_str(self.proxy)
+            # proxy_dict = dict(
+            #     scheme=proxy.protocol,
+            #     hostname=proxy.host,
+            #     port=proxy.port,
+            #     username=proxy.login,
+            #     password=proxy.password
+            # )
+            # Remove the scheme (e.g., "socks5://")
+            proxy_details = self.proxy.split("://")[1]
+            
+            # Extract the username, password, hostname, and port
+            credentials, hostname_port = proxy_details.split("@")
+            username, password = credentials.split(":")
+            hostname, port = hostname_port.split(":")
+
+            # Assign the correct proxy_dict
+            proxy_dict = {
+                "scheme": self.proxy.split("://")[0],
+                "hostname": hostname,
+                "port": int(port),
+                "username": username,
+                "password": password
+            }
         else:
             proxy_dict = None
-        self.tg_client.proxy = proxy_dict
+        # self.tg_client.proxy = proxy_dict
 
         try:
-            if not self.tg_client.is_connected:
-                try:
-                    await self.tg_client.connect()
-                except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
-                    raise InvalidSession(self.session_name)
+            # if not self.tg_client.is_connected:
+            #     try:
+            #         await self.tg_client.connect()
+            #     except (Unauthorized, UserDeactivated, AuthKeyUnregistered):
+            #         raise InvalidSession(self.session_name)
 
-            peer = await self.tg_client.resolve_peer('Vertus_App_bot')
-            if settings.USE_REF_ID:
-                self.ref_id = settings.REF_ID
-            else:
-                self.ref_id = "5527112150"
+            # peer = await self.tg_client.resolve_peer('Vertus_App_bot')
+            # if settings.USE_REF_ID:
+            #     self.ref_id = settings.REF_ID
+            # else:
+            #     self.ref_id = "5527112150"
 
-            web_view = await self.tg_client.invoke(RequestAppWebView(
-                peer=peer,
-                app=InputBotAppShortName(bot_id=peer, short_name="app"),
-                platform='android',
-                write_allowed=True,
-                start_param=self.ref_id
-            ))
+            # web_view = await self.tg_client.invoke(RequestAppWebView(
+            #     peer=peer,
+            #     app=InputBotAppShortName(bot_id=peer, short_name="app"),
+            #     platform='android',
+            #     write_allowed=True,
+            #     start_param=self.ref_id
+            # ))
 
-            auth_url = web_view.url
-            tg_web_data = unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])
+            # auth_url = web_view.url
+            # tg_web_data = unquote(string=auth_url.split('tgWebAppData=')[1].split('&tgWebAppVersion')[0])
 
-            if self.tg_client.is_connected:
-                await self.tg_client.disconnect()
+            # if self.tg_client.is_connected:
+            #     await self.tg_client.disconnect()
 
-            return tg_web_data
+            # tg_web_data = 'query_id=AAF63vlIAwAAAHre-UiG6tLd&user=%7B%22id%22%3A7666785914%2C%22first_name%22%3A%2227%22%2C%22last_name%22%3A%22%22%2C%22language_code%22%3A%22ur%22%2C%22allows_write_to_pm%22%3Atrue%7D&auth_date=1727361842&hash=04a0136493554d03dcd492101f4284aa509b19bc348eebaa76ec41000a59d41e'
+            # return tg_web_data
+            return self.tg_client
 
         except InvalidSession as error:
             raise error
@@ -86,10 +117,12 @@ class Claimer:
 
     async def login(self, http_client: aiohttp.ClientSession):
         is_first = False
+        print("login")
         try:
             async with http_client.get("https://api3.thevertus.app/balance") as response:
                 response.raise_for_status()
                 data = await response.json()
+                print(data)
                 data = data.get("tonResponse")
                 data = data.get("isSuccess")
                 if not data:
@@ -464,13 +497,20 @@ class Claimer:
 
         while True:
             try:
-                proxy_conn = ProxyConnector().from_url(self.proxy) if self.proxy else None
-                async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
+                ssl_context = TLSv1_3_BYPASS.create_ssl_context()
+                proxy_conn = ProxyConnector().from_url(url=self.proxy, rdns=True, ssl=ssl_context) if self.proxy \
+                    else aiohttp.TCPConnector(ssl=ssl_context)
+                # proxy_conn = None
+                async with aiocfscrape.CloudflareScraper(headers=headers, connector=proxy_conn) as http_client:
+                # async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
                     http_client.headers['authorization'] = "Bearer " + self.token
-                    http_client.headers['referer'] = "https://thevertus.app/?tgWebAppStartParam= " + self.ref_id
+                    http_client.headers['referer'] = "https://thevertus.app/"
+
+                    # http_client.headers['referer'] = "https://thevertus.app/?tgWebAppStartParam= " + self.ref_id
 
                     if self.proxy:
-                        await self.check_proxy(http_client=http_client)
+                    # if True:
+                        await self.check_proxy_2(http_client=http_client)
 
                     if settings.FAKE_USERAGENT:
                         http_client.headers['user-agent'] = generate_random_user_agent(device_type='android',
@@ -505,11 +545,12 @@ class Claimer:
 
             except InvalidSession as error:
                 raise error
-            logger.info(f"{self.session_name} | sleeping for {settings.SLEEP_TIME} seconds")
-            await asyncio.sleep(delay=settings.SLEEP_TIME)
+            random_delay_2 = random.randint(1800, 2200)
+            logger.info(f"{self.session_name} | sleeping for {random_delay_2} seconds")
+            await asyncio.sleep(delay=random_delay_2)
 
 
-async def run_claimer(tg_client: Client, proxy: str | None):
+async def run_claimer(tg_client, proxy: str | None):
     try:
         await Claimer(tg_client=tg_client, proxy=proxy).run()
     except InvalidSession:
