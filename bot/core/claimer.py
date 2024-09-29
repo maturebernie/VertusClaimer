@@ -17,6 +17,7 @@ from bot.config import settings
 from bot.exceptions import InvalidSession
 from .headers import headers
 from .TLS import TLSv1_3_BYPASS
+from urllib.parse import unquote, quote, unquote_plus
 
 
 class Claimer:
@@ -176,9 +177,11 @@ class Claimer:
         url = "https://api.thevertus.app/game-service/collect"
         body = {}
 
+        print("collecting")
         try:
             async with http_client.post(url, json=body) as response:
                 data = await response.json()
+                print(data)
                 new_balance = data.get("newBalance")
                 a_b = new_balance / 10 ** 18 if new_balance is not None else 0
                 self.balance = a_b
@@ -191,9 +194,11 @@ class Claimer:
         url = "https://api.thevertus.app/users/claim-daily"
         body = {}
 
+        print("daily_bonus")
         try:
             async with http_client.post(url, json=body) as response:
                 data = await response.json()
+                print(data)
                 success = data.get("success")
                 n_balance = data.get("balance") / 10 ** 18 if data.get("balance") is not None else 0
                 self.balance = n_balance
@@ -213,9 +218,11 @@ class Claimer:
         url_1 = "https://api.thevertus.app/missions/check-adsgram"
         body = {}
 
+        print("ads")
         try:
             async with http_client.post(url_1, json=body) as response:
                 data = await response.json()
+                print(data)
                 is_success = data.get("isSuccess")
                 message = data.get("msg")
 
@@ -512,6 +519,7 @@ class Claimer:
                     # if True:
                         await self.check_proxy_2(http_client=http_client)
 
+
                     if settings.FAKE_USERAGENT:
                         http_client.headers['user-agent'] = generate_random_user_agent(device_type='android',
                                                                                        browser_type='chrome')
@@ -520,6 +528,7 @@ class Claimer:
                     await self.collect(http_client=http_client)
                     await self.daily_bonus(http_client=http_client)
                     await self.ads(http_client=http_client)
+                    
 
                     if settings.COMPLETE_TASK:
                         task_ids, task_titles = await self.get_task(http_client=http_client)
@@ -551,6 +560,8 @@ class Claimer:
 
 
 async def run_claimer(tg_client, proxy: str | None):
+    tg_client = unquote_plus(tg_client)
+    print(tg_client)
     try:
         await Claimer(tg_client=tg_client, proxy=proxy).run()
     except InvalidSession:
