@@ -309,6 +309,12 @@ class Claimer:
             initial_balance = int(data.get("user").get("balance")) / 10 ** 18
 
             for mission_id, title in zip(id_list, task_title):
+                sleep_time = random.randint(100, 400)
+                await asyncio.sleep(delay=sleep_time)
+
+                probability = random.uniform(0, 100)
+                if probability <= 30:
+                    continue
                 body = {"missionId": mission_id}
                 response = await http_client.post(url, json=body)
                 response.raise_for_status()
@@ -502,6 +508,8 @@ class Claimer:
         if not tg_web_data:
             return
 
+        random_user_agent = generate_random_user_agent(device_type='android', browser_type='chrome')
+
         while True:
             try:
                 ssl_context = TLSv1_3_BYPASS.create_ssl_context()
@@ -521,16 +529,33 @@ class Claimer:
 
 
                     if settings.FAKE_USERAGENT:
-                        http_client.headers['user-agent'] = generate_random_user_agent(device_type='android',
-                                                                                       browser_type='chrome')
+                        http_client.headers['user-agent'] = random_user_agent
 
                     await self.login(http_client=http_client)
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
                     await self.collect(http_client=http_client)
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
                     await self.daily_bonus(http_client=http_client)
-                    await self.ads(http_client=http_client)
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    # Generate a random probability between 0 and 100
+                    probability = random.uniform(0, 100)
+
+                    # Check if the probability is less than or equal to 80%
+                    if probability <= 30:
+                        await self.ads(http_client=http_client)
+                    
                     
 
-                    if settings.COMPLETE_TASK:
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    if settings.COMPLETE_TASK and probability <= 30:
                         task_ids, task_titles = await self.get_task(http_client=http_client)
                         if task_ids:
                             await self.complete_task(task_ids, task_titles, http_client=http_client)
@@ -538,28 +563,49 @@ class Claimer:
                             logger.warning(f"{self.session_name} | No tasks available.")
                         await asyncio.sleep(2)
 
-                    if settings.UPGRADE_FARM:
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    if settings.UPGRADE_FARM and probability <= 30:
                         await self.upgrade_farm(http_client=http_client)
 
-                    if settings.UPGRADE_STORAGE:
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    if settings.UPGRADE_STORAGE and probability <= 30:
                         await self.upgrade_storage(http_client=http_client)
 
-                    if settings.UPGRADE_POPULATION:
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    if settings.UPGRADE_POPULATION and probability <= 30:
                         await self.upgrade_population(http_client=http_client)
 
-                    if settings.UPGRADE_CARDS:
+                    sleep_time = random.randint(100, 400)
+                    await asyncio.sleep(delay=sleep_time)
+
+                    if settings.UPGRADE_CARDS and probability <= 30:
                         card_details = await self.get_cards(http_client=http_client)
                         for card_id, card_name in card_details:
+                            sleep_time = random.randint(100, 400)
+                            await asyncio.sleep(delay=sleep_time)
+
+                            probability = random.uniform(0, 100)
+                            if probability <= 30:
+                                continue
                             await self.post_card_upgrade(card_id, card_name, http_client=http_client)
 
             except InvalidSession as error:
                 raise error
-            random_delay_2 = random.randint(1800, 2200)
+            random_delay_2 = random.randint(3600*12, 3600*24)
             logger.info(f"{self.session_name} | sleeping for {random_delay_2} seconds")
             await asyncio.sleep(delay=random_delay_2)
 
 
 async def run_claimer(tg_client, proxy: str | None):
+    sleep_time = random.randint(100, 4000)
+    await asyncio.sleep(delay=sleep_time)
+
     tg_client = unquote_plus(tg_client)
     print(tg_client)
     try:
