@@ -531,6 +531,7 @@ class Claimer:
                     if settings.FAKE_USERAGENT:
                         http_client.headers['user-agent'] = random_user_agent
 
+                    logger.info(f"{http_client.headers} | Bot is running...")
                     await self.login(http_client=http_client)
                     sleep_time = random.randint(100, 400)
                     await asyncio.sleep(delay=sleep_time)
@@ -603,11 +604,11 @@ class Claimer:
 
 
 async def run_claimer(tg_client, proxy: str | None):
-    sleep_time = random.randint(100, 4000)
-    await asyncio.sleep(delay=sleep_time)
+    # sleep_time = random.randint(100, 4000)
+    # await asyncio.sleep(delay=sleep_time)
 
-    tg_client = unquote_plus(tg_client)
-    print(tg_client)
+    # tg_client = unquote_plus(tg_client)
+    # print(tg_client)
     try:
         await Claimer(tg_client=tg_client, proxy=proxy).run()
     except InvalidSession:
