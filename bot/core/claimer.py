@@ -598,7 +598,7 @@ class Claimer:
 
             except InvalidSession as error:
                 raise error
-            random_delay_2 = random.randint(3600*12, 3600*24)
+            random_delay_2 = random.randint(3600*2, 3600*12)
             logger.info(f"{self.session_name} | sleeping for {random_delay_2} seconds")
             await asyncio.sleep(delay=random_delay_2)
 
